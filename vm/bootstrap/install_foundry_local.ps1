@@ -24,52 +24,57 @@ if ($ram -lt 8) {
     Write-Warning "System has less than 8 GB RAM. Foundry Local may not perform optimally."
 }
 
-# Step 2: Install winget if not present
-Write-Host "Checking for winget..." -ForegroundColor Yellow
+# Step 2: Install Python if not present
+Write-Host "Checking for Python..." -ForegroundColor Yellow
 try {
-    $wingetVersion = winget --version
-    Write-Host "winget is installed: $wingetVersion" -ForegroundColor Green
+    $pythonVersion = python --version
+    Write-Host "Python is installed: $pythonVersion" -ForegroundColor Green
 } catch {
-    Write-Host "Installing winget..." -ForegroundColor Yellow
-    # Download and install App Installer (winget)
+    Write-Host "Installing Python 3.12..." -ForegroundColor Yellow
     $progressPreference = 'silentlyContinue'
-    Write-Host "Downloading winget dependencies..." -ForegroundColor Yellow
     
-    # Install VCLibs
-    $vcLibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
-    Invoke-WebRequest -Uri $vcLibsUrl -OutFile "$env:TEMP\VCLibs.appx" -UseBasicParsing
-    Add-AppxPackage -Path "$env:TEMP\VCLibs.appx"
+    # Download Python installer
+    $pythonUrl = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe"
+    $pythonInstaller = "$env:TEMP\python-installer.exe"
+    Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonInstaller -UseBasicParsing
     
-    # Install UI.Xaml
-    $uiXamlUrl = "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx"
-    Invoke-WebRequest -Uri $uiXamlUrl -OutFile "$env:TEMP\UIXaml.appx" -UseBasicParsing
-    Add-AppxPackage -Path "$env:TEMP\UIXaml.appx"
-    
-    # Install Windows App Runtime (required by winget)
-    $appRuntimeUrl = "https://aka.ms/windowsappruntimeinstall/1.8-x64"
-    Invoke-WebRequest -Uri $appRuntimeUrl -OutFile "$env:TEMP\WindowsAppRuntime.exe" -UseBasicParsing
-    Start-Process -FilePath "$env:TEMP\WindowsAppRuntime.exe" -ArgumentList "/quiet" -Wait
-    
-    # Install winget
-    $wingetUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-    Invoke-WebRequest -Uri $wingetUrl -OutFile "$env:TEMP\winget.msixbundle" -UseBasicParsing
-    Add-AppxPackage -Path "$env:TEMP\winget.msixbundle"
+    # Install Python silently
+    Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1" -Wait
     
     # Refresh PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
     
-    Write-Host "winget installed successfully" -ForegroundColor Green
-    Start-Sleep -Seconds 5
+    Write-Host "Python installed successfully" -ForegroundColor Green
 }
 
-# Step 3: Install Foundry Local using winget
+# Step 3: Install Foundry Local
 Write-Host "Installing Foundry Local..." -ForegroundColor Yellow
+$progressPreference = 'silentlyContinue'
+
+# Try to install Foundry Local using PowerShell installation script
 try {
-    winget install Microsoft.FoundryLocal --accept-source-agreements --accept-package-agreements
+    Write-Host "Downloading Foundry Local installer..." -ForegroundColor Yellow
+    $installScript = Invoke-WebRequest -Uri "https://foundrylocal.com/install.ps1" -UseBasicParsing -ErrorAction Stop
+    Write-Host "Running Foundry Local installer..." -ForegroundColor Yellow
+    Invoke-Expression $installScript.Content
     Write-Host "Foundry Local installed successfully" -ForegroundColor Green
 } catch {
-    Write-Host "Installation encountered an issue, checking if already installed..." -ForegroundColor Yellow
+    Write-Host "PowerShell install failed, trying alternative method..." -ForegroundColor Yellow
+    
+    # Alternative: Try direct download if available
+    try {
+        $foundryUrl = "https://github.com/foundrylocal/foundry-local/releases/latest/download/foundry-local-windows-x64.msi"
+        $foundryInstaller = "$env:TEMP\foundry-local.msi"
+        Invoke-WebRequest -Uri $foundryUrl -OutFile $foundryInstaller -UseBasicParsing
+        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$foundryInstaller`" /quiet /norestart" -Wait
+        Write-Host "Foundry Local installed via MSI" -ForegroundColor Green
+    } catch {
+        Write-Host "Installation encountered an issue, checking if already installed..." -ForegroundColor Yellow
+    }
 }
+
+# Refresh PATH
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
 # Step 4: Verify installation
 Write-Host "Verifying Foundry Local installation..." -ForegroundColor Yellow
