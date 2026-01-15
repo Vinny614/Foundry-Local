@@ -1,4 +1,4 @@
-# install_foundry_local.ps1
+﻿# install_foundry_local.ps1
 # Installs Python, winget, Microsoft Foundry Local, and downloads Phi-3 model for offline AI demo
 
 #Requires -RunAsAdministrator
