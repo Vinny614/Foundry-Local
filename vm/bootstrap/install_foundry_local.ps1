@@ -31,9 +31,30 @@ try {
     Write-Host "winget is installed: $wingetVersion" -ForegroundColor Green
 } catch {
     Write-Host "Installing winget..." -ForegroundColor Yellow
-    # Download and install App Installer from Microsoft Store
-    Write-Error "winget not found. Please install from: https://aka.ms/getwinget"
-    exit 1
+    # Download and install App Installer (winget)
+    $progressPreference = 'silentlyContinue'
+    Write-Host "Downloading winget dependencies..." -ForegroundColor Yellow
+    
+    # Install VCLibs
+    $vcLibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
+    Invoke-WebRequest -Uri $vcLibsUrl -OutFile "$env:TEMP\VCLibs.appx" -UseBasicParsing
+    Add-AppxPackage -Path "$env:TEMP\VCLibs.appx"
+    
+    # Install UI.Xaml
+    $uiXamlUrl = "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx"
+    Invoke-WebRequest -Uri $uiXamlUrl -OutFile "$env:TEMP\UIXaml.appx" -UseBasicParsing
+    Add-AppxPackage -Path "$env:TEMP\UIXaml.appx"
+    
+    # Install winget
+    $wingetUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+    Invoke-WebRequest -Uri $wingetUrl -OutFile "$env:TEMP\winget.msixbundle" -UseBasicParsing
+    Add-AppxPackage -Path "$env:TEMP\winget.msixbundle"
+    
+    # Refresh PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    
+    Write-Host "winget installed successfully" -ForegroundColor Green
+    Start-Sleep -Seconds 5
 }
 
 # Step 3: Install Foundry Local using winget
