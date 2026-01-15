@@ -1,0 +1,2 @@
+# No external dependencies required beyond Python standard library
+# The agent uses subprocess to call foundry CLI and the MCP server

@@ -1,0 +1,37 @@
+# Example Queries for Foundry Local + MCP Agent
+
+## Basic Queries
+1. What products do we have in the database?
+2. Show me the database schema
+3. Give me a summary of the sales table
+
+## Product Analysis
+4. What are the top 5 products by revenue?
+5. Which product has sold the most units?
+6. Show me all laptop sales
+
+## Regional Analysis
+7. Which region has the highest total sales?
+8. Compare sales across all regions
+9. Show me sales data for the East region
+
+## Category Analysis
+10. What are the total sales for Electronics?
+11. Compare sales between Electronics and Furniture categories
+12. Which category is most profitable?
+
+## Revenue & Profit
+13. What is the total profit for each region?
+14. Calculate the profit margin by category
+15. Show me the most profitable products
+
+## Trend Analysis
+16. Show me sales trends over time
+17. What was our best sales day?
+18. Compare January vs February sales
+
+## Complex Queries
+19. Find products with revenue over 50000
+20. Which region and category combination performs best?
+21. Show me average order values by region
+22. Calculate total cost vs total revenue
