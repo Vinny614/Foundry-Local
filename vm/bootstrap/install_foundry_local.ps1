@@ -5,7 +5,8 @@
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Foundry Local Setup" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "" -ForegroundColor Cyan
 
 # Step 1: Create directory structure
 Write-Host "Setting up directory structure..." -ForegroundColor Yellow
@@ -136,19 +137,24 @@ try {
     Write-Warning "Could not verify cache: $_"
 }
 
-Write-Host "`n========================================" -ForegroundColor Cyan
+Write-Host "" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Installation Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "✓ Python: Installed" -ForegroundColor Green
 Write-Host "✓ Foundry Local: Installed and running" -ForegroundColor Green  
 Write-Host "✓ Phi-3 Model: Downloaded and cached" -ForegroundColor Green
-Write-Host "`nYou can test the model with:" -ForegroundColor Yellow
+Write-Host "" -ForegroundColor Yellow
+Write-Host "You can test the model with:" -ForegroundColor Yellow
 Write-Host "  foundry model run phi-3-mini-4k-instruct" -ForegroundColor White
-Write-Host "`nView all models with:" -ForegroundColor Yellow
+Write-Host "" -ForegroundColor Yellow
+Write-Host "View all models with:" -ForegroundColor Yellow
 Write-Host "  foundry model list" -ForegroundColor White
-Write-Host "`nCheck service status:" -ForegroundColor Yellow
+Write-Host "" -ForegroundColor Yellow
+Write-Host "Check service status:" -ForegroundColor Yellow
 Write-Host "  foundry service status" -ForegroundColor White
-Write-Host "`nNext steps:" -ForegroundColor Yellow
+Write-Host "" -ForegroundColor Yellow
+Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Run install_db_and_seed_data.ps1" -ForegroundColor White
 Write-Host "  2. Run start_mcp_server.ps1" -ForegroundColor White
 Write-Host "  3. Test the agent: cd C:\FoundryDemo\agent; python agent.py" -ForegroundColor White
