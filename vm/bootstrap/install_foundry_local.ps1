@@ -15,42 +15,22 @@ if (!(Test-Path $demoPath)) {
     New-Item -Path $demoPath -ItemType Directory -Force | Out-Null
 }
 
-# Step 2: Install App Installer (winget) if not present
-Write-Host "Checking for winget..." -ForegroundColor Yellow
-try {
-    $wingetVersion = winget --version
-    Write-Host "winget is installed: $wingetVersion" -ForegroundColor Green
-} catch {
-    Write-Host "Installing App Installer (winget)..." -ForegroundColor Yellow
-    
-    # Download and install App Installer from Microsoft Store
-    $progressPreference = 'silentlyContinue'
-    $appInstallerUrl = "https://aka.ms/getwinget"
-    
-    Write-Host "Please install App Installer from: $appInstallerUrl" -ForegroundColor Yellow
-    Write-Host "Or download it manually and run this script again." -ForegroundColor Yellow
-    
-    # Try automated installation
-    try {
-        Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
-        Start-Sleep -Seconds 5
-    } catch {
-        Write-Error "Failed to install winget automatically. Please install from: https://aka.ms/getwinget"
-        exit 1
-    }
-}
-
-# Refresh PATH
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-# Step 3: Install Python if not present
+# Step 2: Install Python if not present
 Write-Host "Checking for Python..." -ForegroundColor Yellow
 try {
     $pythonVersion = python --version
     Write-Host "Python is installed: $pythonVersion" -ForegroundColor Green
 } catch {
     Write-Host "Installing Python 3.12..." -ForegroundColor Yellow
-    winget install Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements
+    $progressPreference = 'silentlyContinue'
+    
+    # Download Python installer
+    $pythonUrl = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe"
+    $pythonInstaller = "$env:TEMP\python-installer.exe"
+    Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonInstaller -UseBasicParsing
+    
+    # Install Python silently
+    Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1" -Wait
     
     # Refresh PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -58,11 +38,20 @@ try {
     Write-Host "Python installed successfully" -ForegroundColor Green
 }
 
-# Step 4: Install Microsoft Foundry Local
+# Step 3: Install Microsoft Foundry Local using direct installer
 Write-Host "Installing Microsoft Foundry Local..." -ForegroundColor Yellow
+$progressPreference = 'silentlyContinue'
 
 try {
-    winget install Microsoft.FoundryLocal --accept-package-agreements --accept-source-agreements
+    # Download Foundry Local installer
+    $foundryInstallerUrl = "https://aka.ms/foundry-local-installer"
+    $foundryInstaller = "$env:TEMP\FoundryLocalSetup.exe"
+    
+    Write-Host "Downloading Foundry Local installer..." -ForegroundColor Yellow
+    Invoke-WebRequest -Uri $foundryInstallerUrl -OutFile $foundryInstaller -UseBasicParsing
+    
+    Write-Host "Running Foundry Local installer (this may take a few minutes)..." -ForegroundColor Yellow
+    Start-Process -FilePath $foundryInstaller -ArgumentList "/VERYSILENT /NORESTART" -Wait
     
     # Refresh PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -70,11 +59,11 @@ try {
     Write-Host "Foundry Local installed successfully" -ForegroundColor Green
 } catch {
     Write-Error "Failed to install Foundry Local: $_"
-    Write-Host "You can manually install from: https://aka.ms/foundry-local-installer" -ForegroundColor Yellow
+    Write-Host "You can manually download from: https://aka.ms/foundry-local-installer" -ForegroundColor Yellow
     exit 1
 }
 
-# Step 5: Verify installation
+# Step 4: Verify installation
 Write-Host "Verifying Foundry Local installation..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
@@ -90,7 +79,7 @@ try {
     exit 1
 }
 
-# Step 6: Start Foundry Local service
+# Step 5: Start Foundry Local service
 Write-Host "Starting Foundry Local service..." -ForegroundColor Yellow
 try {
     foundry service start
@@ -109,7 +98,7 @@ try {
     }
 }
 
-# Step 7: Download Phi-3 model for offline use
+# Step 6: Download Phi-3 model for offline use
 Write-Host "Downloading Phi-3 model (this will take 5-10 minutes)..." -ForegroundColor Yellow
 Write-Host "Foundry will automatically select the best variant for your hardware." -ForegroundColor Cyan
 
@@ -123,7 +112,7 @@ try {
     Write-Host "You can manually download later with: foundry model run phi-3-mini-4k-instruct" -ForegroundColor Yellow
 }
 
-# Step 8: Verify model is cached
+# Step 7: Verify model is cached
 Write-Host "Verifying model cache..." -ForegroundColor Yellow
 try {
     $cacheList = foundry cache list
