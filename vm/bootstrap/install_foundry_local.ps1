@@ -1,4 +1,4 @@
-﻿﻿# install_foundry_local.ps1
+﻿# install_foundry_local.ps1
 # Installs Python, winget, Microsoft Foundry Local, and downloads Phi-3 model for offline AI demo
 
 #Requires -RunAsAdministrator
@@ -38,26 +38,12 @@ try {
     Write-Host "Python installed successfully" -ForegroundColor Green
 }
 
-# Step 3: Install Microsoft Foundry Local using MSIX for Windows Server
+# Step 3: Install Microsoft Foundry Local using winget (Windows 11)
 Write-Host "Installing Microsoft Foundry Local..." -ForegroundColor Yellow
-$progressPreference = 'silentlyContinue'
 
 try {
-    # Download the MSIX package and VCLibs dependency
-    $foundryMsixUrl = "https://github.com/microsoft/Foundry-Local/releases/latest/download/FoundryLocal.msix"
-    $vcLibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
-    
-    $foundryMsix = "$env:TEMP\FoundryLocal.msix"
-    $vcLibs = "$env:TEMP\VcLibs.appx"
-    
-    Write-Host "Downloading Foundry Local MSIX package..." -ForegroundColor Yellow
-    Invoke-WebRequest -Uri $foundryMsixUrl -OutFile $foundryMsix -UseBasicParsing
-    
-    Write-Host "Downloading VCLibs dependency..." -ForegroundColor Yellow
-    Invoke-WebRequest -Uri $vcLibsUrl -OutFile $vcLibs -UseBasicParsing
-    
-    Write-Host "Installing Foundry Local for all users (this may take a few minutes)..." -ForegroundColor Yellow
-    Add-AppxProvisionedPackage -Online -PackagePath $foundryMsix -DependencyPackagePath $vcLibs -SkipLicense
+    # Install using winget (available by default on Windows 11)
+    winget install Microsoft.FoundryLocal --accept-package-agreements --accept-source-agreements --silent
     
     # Refresh PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -65,7 +51,7 @@ try {
     Write-Host "Foundry Local installed successfully" -ForegroundColor Green
 } catch {
     Write-Error "Failed to install Foundry Local: $_"
-    Write-Host "You can manually download the MSIX from: https://github.com/microsoft/Foundry-Local/releases" -ForegroundColor Yellow
+    Write-Host "You can manually install with: winget install Microsoft.FoundryLocal" -ForegroundColor Yellow
     exit 1
 }
 

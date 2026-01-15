@@ -72,9 +72,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
     }
     storageProfile: {
       imageReference: {
-        publisher: 'MicrosoftWindowsServer'
-        offer: 'WindowsServer'
-        sku: '2022-datacenter-azure-edition'
+        publisher: 'MicrosoftWindowsDesktop'
+        offer: 'Windows-11'
+        sku: 'win11-23h2-pro'
         version: 'latest'
       }
       osDisk: {
