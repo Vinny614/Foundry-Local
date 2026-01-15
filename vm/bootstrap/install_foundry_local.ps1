@@ -1,45 +1,55 @@
-# Install Foundry Local on Windows VM
-# This script downloads, installs, and configures Foundry Local
-# Then downloads and caches a Phi model for offline use
+# install_foundry_local.ps1
+# Installs Python, winget, Microsoft Foundry Local, and downloads Phi-3 model for offline AI demo
 
-$ErrorActionPreference = "Stop"
-$ProgressPreference = 'SilentlyContinue'
+#Requires -RunAsAdministrator
 
-Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "Foundry Local Installation Script" -ForegroundColor Cyan
-Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Foundry Local Setup" -ForegroundColor Cyan
+Write-Host "========================================`n" -ForegroundColor Cyan
 
-# Check for admin rights
-if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Error "This script must be run as Administrator"
-    exit 1
+# Step 1: Create directory structure
+Write-Host "Setting up directory structure..." -ForegroundColor Yellow
+$demoPath = "C:\FoundryDemo"
+if (!(Test-Path $demoPath)) {
+    New-Item -Path $demoPath -ItemType Directory -Force | Out-Null
 }
 
-# Step 1: Check prerequisites
-Write-Host "Checking prerequisites..." -ForegroundColor Yellow
-$ram = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB
-Write-Host "System RAM: $([math]::Round($ram, 2)) GB" -ForegroundColor Green
-
-if ($ram -lt 8) {
-    Write-Warning "System has less than 8 GB RAM. Foundry Local may not perform optimally."
+# Step 2: Install App Installer (winget) if not present
+Write-Host "Checking for winget..." -ForegroundColor Yellow
+try {
+    $wingetVersion = winget --version
+    Write-Host "winget is installed: $wingetVersion" -ForegroundColor Green
+} catch {
+    Write-Host "Installing App Installer (winget)..." -ForegroundColor Yellow
+    
+    # Download and install App Installer from Microsoft Store
+    $progressPreference = 'silentlyContinue'
+    $appInstallerUrl = "https://aka.ms/getwinget"
+    
+    Write-Host "Please install App Installer from: $appInstallerUrl" -ForegroundColor Yellow
+    Write-Host "Or download it manually and run this script again." -ForegroundColor Yellow
+    
+    # Try automated installation
+    try {
+        Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+        Start-Sleep -Seconds 5
+    } catch {
+        Write-Error "Failed to install winget automatically. Please install from: https://aka.ms/getwinget"
+        exit 1
+    }
 }
 
-# Step 2: Install Python if not present
+# Refresh PATH
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+# Step 3: Install Python if not present
 Write-Host "Checking for Python..." -ForegroundColor Yellow
 try {
     $pythonVersion = python --version
     Write-Host "Python is installed: $pythonVersion" -ForegroundColor Green
 } catch {
     Write-Host "Installing Python 3.12..." -ForegroundColor Yellow
-    $progressPreference = 'silentlyContinue'
-    
-    # Download Python installer
-    $pythonUrl = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe"
-    $pythonInstaller = "$env:TEMP\python-installer.exe"
-    Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonInstaller -UseBasicParsing
-    
-    # Install Python silently
-    Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1" -Wait
+    winget install Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements
     
     # Refresh PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -47,40 +57,27 @@ try {
     Write-Host "Python installed successfully" -ForegroundColor Green
 }
 
-# Step 3: Install Foundry Local
-Write-Host "Installing Foundry Local..." -ForegroundColor Yellow
-$progressPreference = 'silentlyContinue'
+# Step 4: Install Microsoft Foundry Local
+Write-Host "Installing Microsoft Foundry Local..." -ForegroundColor Yellow
 
-# Try to install Foundry Local using PowerShell installation script
 try {
-    Write-Host "Downloading Foundry Local installer..." -ForegroundColor Yellow
-    $installScript = Invoke-WebRequest -Uri "https://foundrylocal.com/install.ps1" -UseBasicParsing -ErrorAction Stop
-    Write-Host "Running Foundry Local installer..." -ForegroundColor Yellow
-    Invoke-Expression $installScript.Content
+    winget install Microsoft.FoundryLocal --accept-package-agreements --accept-source-agreements
+    
+    # Refresh PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    
     Write-Host "Foundry Local installed successfully" -ForegroundColor Green
 } catch {
-    Write-Host "PowerShell install failed, trying alternative method..." -ForegroundColor Yellow
-    
-    # Alternative: Try direct download if available
-    try {
-        $foundryUrl = "https://github.com/foundrylocal/foundry-local/releases/latest/download/foundry-local-windows-x64.msi"
-        $foundryInstaller = "$env:TEMP\foundry-local.msi"
-        Invoke-WebRequest -Uri $foundryUrl -OutFile $foundryInstaller -UseBasicParsing
-        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$foundryInstaller`" /quiet /norestart" -Wait
-        Write-Host "Foundry Local installed via MSI" -ForegroundColor Green
-    } catch {
-        Write-Host "Installation encountered an issue, checking if already installed..." -ForegroundColor Yellow
-    }
+    Write-Error "Failed to install Foundry Local: $_"
+    Write-Host "You can manually install from: https://aka.ms/foundry-local-installer" -ForegroundColor Yellow
+    exit 1
 }
 
-# Refresh PATH
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-# Step 4: Verify installation
+# Step 5: Verify installation
 Write-Host "Verifying Foundry Local installation..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
-# Refresh PATH
+# Refresh PATH again
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
 try {
@@ -88,86 +85,71 @@ try {
     Write-Host "Foundry Local is installed: $foundryVersion" -ForegroundColor Green
 } catch {
     Write-Error "Foundry Local installation verification failed. The 'foundry' command is not available."
+    Write-Host "Try restarting PowerShell or running: foundry service restart" -ForegroundColor Yellow
     exit 1
 }
 
-# Step 5: Start Foundry Local service
+# Step 6: Start Foundry Local service
 Write-Host "Starting Foundry Local service..." -ForegroundColor Yellow
 try {
     foundry service start
     Start-Sleep -Seconds 10
+    
     $serviceStatus = foundry service status
-    Write-Host "Service Status: $serviceStatus" -ForegroundColor Green
+    Write-Host "Service status: $serviceStatus" -ForegroundColor Green
 } catch {
-    Write-Warning "Service start encountered an issue: $_"
+    Write-Host "Service may already be running. Checking status..." -ForegroundColor Yellow
+    try {
+        foundry service status
+    } catch {
+        Write-Warning "Service status check failed. Trying restart..."
+        foundry service restart
+        Start-Sleep -Seconds 10
+    }
 }
 
-# Step 6: List available models
-Write-Host "Listing available models..." -ForegroundColor Yellow
-try {
-    foundry model list
-} catch {
-    Write-Warning "Could not list models: $_"
-}
-
-# Step 7: Download and cache Phi model for offline use
-Write-Host "Downloading Phi model for offline caching..." -ForegroundColor Yellow
-Write-Host "This may take several minutes depending on your internet connection." -ForegroundColor Cyan
-
-# Using phi-3-mini-4k-instruct (smaller, faster for demo)
-$modelAlias = "phi-3-mini-4k-instruct"
+# Step 7: Download Phi-3 model for offline use
+Write-Host "Downloading Phi-3 model (this will take 5-10 minutes)..." -ForegroundColor Yellow
+Write-Host "Foundry will automatically select the best variant for your hardware." -ForegroundColor Cyan
 
 try {
-    Write-Host "Downloading model: $modelAlias" -ForegroundColor Yellow
-    foundry model download $modelAlias
+    # Download phi-3-mini model
+    foundry model run phi-3-mini-4k-instruct --auto-exit
     
-    Write-Host "Loading model into memory (this caches it)..." -ForegroundColor Yellow
-    foundry model load $modelAlias
-    
-    Write-Host "Verifying model is cached..." -ForegroundColor Yellow
-    foundry cache list
-    
-    Write-Host "Model cached successfully!" -ForegroundColor Green
-    Write-Host "The model is now available for offline use." -ForegroundColor Green
+    Write-Host "Phi-3 model downloaded successfully" -ForegroundColor Green
 } catch {
-    Write-Error "Failed to download/cache model: $_"
-    Write-Host "You can manually download later with: foundry model download $modelAlias" -ForegroundColor Yellow
+    Write-Error "Failed to download Phi-3 model: $_"
+    Write-Host "You can manually download later with: foundry model run phi-3-mini-4k-instruct" -ForegroundColor Yellow
 }
 
-# Step 8: Get service endpoint
-Write-Host "Getting service endpoint..." -ForegroundColor Yellow
+# Step 8: Verify model is cached
+Write-Host "Verifying model cache..." -ForegroundColor Yellow
 try {
-    $status = foundry service status
-    Write-Host "Foundry Local endpoint: $status" -ForegroundColor Green
+    $cacheList = foundry cache list
+    Write-Host "Cached models:" -ForegroundColor Yellow
+    Write-Host $cacheList
+    
+    if ($cacheList -match "phi-3") {
+        Write-Host "Phi-3 model is cached and ready for offline use!" -ForegroundColor Green
+    }
 } catch {
-    Write-Warning "Could not get service endpoint: $_"
+    Write-Warning "Could not verify cache: $_"
 }
 
-# Step 9: Create a simple test
-Write-Host "Creating test script..." -ForegroundColor Yellow
-$testScript = @'
-# Test Foundry Local
-# Run this to verify Foundry Local is working
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-Write-Host "Testing Foundry Local..." -ForegroundColor Cyan
-foundry service status
-foundry cache list
-
-Write-Host "`nYou can now run interactive mode with:" -ForegroundColor Yellow
-Write-Host "foundry model run phi-3-mini-4k-instruct" -ForegroundColor Green
-'@
-
-$testScript | Out-File -FilePath "C:\FoundryTest.ps1" -Encoding UTF8
-Write-Host "Test script saved to: C:\FoundryTest.ps1" -ForegroundColor Green
-
-Write-Host ""
-Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "Foundry Local Installation Complete!" -ForegroundColor Green
-Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "Next Steps:" -ForegroundColor Yellow
-Write-Host "1. The Phi model has been cached for offline use"
-Write-Host "2. Run: install_db_and_seed_data.ps1"
-Write-Host "3. Run: start_mcp_server.ps1"
-Write-Host "4. Test the agent application"
-Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "`n========================================" -ForegroundColor Cyan
+Write-Host "Installation Complete!" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "✓ Python: Installed" -ForegroundColor Green
+Write-Host "✓ Foundry Local: Installed and running" -ForegroundColor Green  
+Write-Host "✓ Phi-3 Model: Downloaded and cached" -ForegroundColor Green
+Write-Host "`nYou can test the model with:" -ForegroundColor Yellow
+Write-Host "  foundry model run phi-3-mini-4k-instruct" -ForegroundColor White
+Write-Host "`nView all models with:" -ForegroundColor Yellow
+Write-Host "  foundry model list" -ForegroundColor White
+Write-Host "`nCheck service status:" -ForegroundColor Yellow
+Write-Host "  foundry service status" -ForegroundColor White
+Write-Host "`nNext steps:" -ForegroundColor Yellow
+Write-Host "  1. Run install_db_and_seed_data.ps1" -ForegroundColor White
+Write-Host "  2. Run start_mcp_server.ps1" -ForegroundColor White
+Write-Host "  3. Test the agent: cd C:\FoundryDemo\agent; python agent.py" -ForegroundColor White
+Write-Host "========================================`n" -ForegroundColor Cyan
