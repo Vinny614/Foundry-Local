@@ -42,63 +42,108 @@ try {
 Write-Host "Installing Microsoft Foundry Local..." -ForegroundColor Yellow
 
 try {
-    # Install using winget (available by default on Windows 11)
-    winget install Microsoft.FoundryLocal --accept-package-agreements --accept-source-agreements --silent
-    
-    # Refresh PATH
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    # Install using winget, specifying source to avoid msstore errors
+    winget install Microsoft.FoundryLocal --source winget --accept-package-agreements --accept-source-agreements --silent
     
     Write-Host "Foundry Local installed successfully" -ForegroundColor Green
 } catch {
     Write-Error "Failed to install Foundry Local: $_"
-    Write-Host "You can manually install with: winget install Microsoft.FoundryLocal" -ForegroundColor Yellow
+    Write-Host "You can manually install with: winget install Microsoft.FoundryLocal --source winget" -ForegroundColor Yellow
     exit 1
 }
 
-# Step 4: Verify installation
+# Step 4: Verify installation and refresh PATH
 Write-Host "Verifying Foundry Local installation..." -ForegroundColor Yellow
-Start-Sleep -Seconds 5
+Write-Host "Waiting for installation to complete and PATH to refresh..." -ForegroundColor Yellow
+Start-Sleep -Seconds 10
 
-# Refresh PATH again
+# Multiple PATH refresh strategies
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-try {
-    $foundryVersion = foundry --version
-    Write-Host "Foundry Local is installed: $foundryVersion" -ForegroundColor Green
-} catch {
-    Write-Error "Foundry Local installation verification failed. The 'foundry' command is not available."
-    Write-Host "Try restarting PowerShell or running: foundry service restart" -ForegroundColor Yellow
-    exit 1
-}
+# Try to find foundry.exe in common locations
+$foundryPaths = @(
+    "$env:LOCALAPPDATA\Microsoft\WindowsApps\foundry.exe",
+    "$env:ProgramFiles\Foundry Local\foundry.exe",
+    "${env:ProgramFiles(x86)}\Foundry Local\foundry.exe"
+)
 
-# Step 5: Start Foundry Local service
-Write-Host "Starting Foundry Local service..." -ForegroundColor Yellow
-try {
-    foundry service start
-    Start-Sleep -Seconds 10
-    
-    $serviceStatus = foundry service status
-    Write-Host "Service status: $serviceStatus" -ForegroundColor Green
-} catch {
-    Write-Host "Service may already be running. Checking status..." -ForegroundColor Yellow
-    try {
-        foundry service status
-    } catch {
-        Write-Warning "Service status check failed. Trying restart..."
-        foundry service restart
-        Start-Sleep -Seconds 10
+$foundryFound = $false
+foreach ($path in $foundryPaths) {
+    if (Test-Path $path) {
+        Write-Host "Found Foundry at: $path" -ForegroundColor Green
+        $foundryFound = $true
+        break
     }
 }
 
-# Step 6: Download Phi-3 model for offline use
-Write-Host "Downloading Phi-3 model (this will take 5-10 minutes)..." -ForegroundColor Yellow
-Write-Host "Foundry will automatically select the best variant for your hardware." -ForegroundColor Cyan
+# Try running foundry command
+try {
+    $foundryVersion = & foundry --version 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Foundry Local is installed: $foundryVersion" -ForegroundColor Green
+    } else {
+        throw "foundry command returned exit code $LASTEXITCODE"
+    }
+} catch {
+    Write-Warning "The 'foundry' command is not immediately available in PATH."
+    Write-Host ""
+    Write-Host "This is normal for fresh installations. Please:" -ForegroundColor Yellow
+    Write-Host "1. Close this PowerShell window" -ForegroundColor Yellow
+    Write-Host "2. Open a NEW PowerShell window as Administrator" -ForegroundColor Yellow
+    Write-Host "3. Run: foundry --version" -ForegroundColor Yellow
+    Write-Host "4. If that works, continue with: foundry service start" -ForegroundColor Yellow
+    Write-Host ""
+    if ($foundryFound) {
+        Write-Host "Foundry was installed successfully (file exists), just needs PATH refresh." -ForegroundColor Green
+    }
+    Write-Host "Press any key to continue anyway..." -ForegroundColor Cyan
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
+
+# Step 5: Start Foundry Local service (if foundry command is available)
+Write-Host ""
+Write-Host "===================================================================" -ForegroundColor Cyan
+Write-Host "STEP 5: Starting Foundry Local Service" -ForegroundColor Cyan
+Write-Host "===================================================================" -ForegroundColor Cyan
 
 try {
-    # Download phi-3-mini model
-    foundry model run phi-3-mini-4k-instruct --auto-exit
-    
-    Write-Host "Phi-3 model downloaded successfully" -ForegroundColor Green
+    $foundryCmd = Get-Command foundry -ErrorAction SilentlyContinue
+    if ($foundryCmd) {
+        Write-Host "Starting Foundry Local service..." -ForegroundColor Yellow
+        & foundry service start
+        Start-Sleep -Seconds 10
+        
+        $serviceStatus = & foundry service status
+        Write-Host "Service status: $serviceStatus" -ForegroundColor Green
+    } else {
+        Write-Host "Skipping service start - foundry command not in PATH yet." -ForegroundColor Yellow
+        Write-Host "After restarting PowerShell, run: foundry service start" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "Service may already be running or not accessible yet." -ForegroundColor Yellow
+    Write-Host "After restarting PowerShell, try: foundry service restart" -ForegroundColor Yellow
+}
+
+# Step 6: Download Phi-3 model for offline use
+Write-Host ""
+Write-Host "===================================================================" -ForegroundColor Cyan
+Write-Host "STEP 6: Downloading Phi-3 Model" -ForegroundColor Cyan
+Write-Host "===================================================================" -ForegroundColor Cyan
+
+try {
+    $foundryCmd = Get-Command foundry -ErrorAction SilentlyContinue
+    if ($foundryCmd) {
+        Write-Host "Downloading Phi-3 model (this will take 5-10 minutes)..." -ForegroundColor Yellow
+        Write-Host "Foundry will automatically select the best variant for your hardware." -ForegroundColor Cyan
+        
+        & foundry model run phi-3-mini-4k-instruct --auto-exit
+        
+        Write-Host "Phi-3 model downloaded successfully" -ForegroundColor Green
+    } else {
+        Write-Host "Skipping model download - foundry command not in PATH yet." -ForegroundColor Yellow
+        Write-Host "After restarting PowerShell, run:" -ForegroundColor Yellow
+        Write-Host "  foundry model run phi-3-mini-4k-instruct --auto-exit" -ForegroundColor Yellow
+    }
 } catch {
     Write-Error "Failed to download Phi-3 model: $_"
     Write-Host "You can manually download later with: foundry model run phi-3-mini-4k-instruct" -ForegroundColor Yellow
@@ -107,12 +152,17 @@ try {
 # Step 7: Verify model is cached
 Write-Host "Verifying model cache..." -ForegroundColor Yellow
 try {
-    $cacheList = foundry cache list
-    Write-Host "Cached models:" -ForegroundColor Yellow
-    Write-Host $cacheList
-    
-    if ($cacheList -match "phi-3") {
-        Write-Host "Phi-3 model is cached and ready for offline use!" -ForegroundColor Green
+    $foundryCmd = Get-Command foundry -ErrorAction SilentlyContinue
+    if ($foundryCmd) {
+        $cacheList = & foundry cache list
+        Write-Host "Cached models:" -ForegroundColor Yellow
+        Write-Host $cacheList
+        
+        if ($cacheList -match "phi-3") {
+            Write-Host "Phi-3 model is cached and ready for offline use!" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "Skipping cache verification - foundry command not in PATH yet." -ForegroundColor Yellow
     }
 } catch {
     Write-Warning "Could not verify cache: $_"
