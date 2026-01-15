@@ -45,6 +45,11 @@ try {
     Invoke-WebRequest -Uri $uiXamlUrl -OutFile "$env:TEMP\UIXaml.appx" -UseBasicParsing
     Add-AppxPackage -Path "$env:TEMP\UIXaml.appx"
     
+    # Install Windows App Runtime (required by winget)
+    $appRuntimeUrl = "https://aka.ms/windowsappruntimeinstall/1.8-x64"
+    Invoke-WebRequest -Uri $appRuntimeUrl -OutFile "$env:TEMP\WindowsAppRuntime.exe" -UseBasicParsing
+    Start-Process -FilePath "$env:TEMP\WindowsAppRuntime.exe" -ArgumentList "/quiet" -Wait
+    
     # Install winget
     $wingetUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
     Invoke-WebRequest -Uri $wingetUrl -OutFile "$env:TEMP\winget.msixbundle" -UseBasicParsing
