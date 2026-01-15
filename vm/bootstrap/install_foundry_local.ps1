@@ -152,4 +152,4 @@ Write-Host "`nNext steps:" -ForegroundColor Yellow
 Write-Host "  1. Run install_db_and_seed_data.ps1" -ForegroundColor White
 Write-Host "  2. Run start_mcp_server.ps1" -ForegroundColor White
 Write-Host "  3. Test the agent: cd C:\FoundryDemo\agent; python agent.py" -ForegroundColor White
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
