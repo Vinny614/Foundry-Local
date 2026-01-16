@@ -123,6 +123,18 @@ C:\FoundryDemo\
 
 ## 🆘 Troubleshooting Quick Fixes
 
+**Foundry installation fails with 0x80073cf3?**
+```powershell
+# Missing dependencies - run dependency fix script
+C:\FoundryDemo\fix_foundry_dependencies.ps1
+# Then reboot and run install_foundry_local.ps1 again
+
+# Or manually install dependencies:
+winget install Microsoft.DotNet.DesktopRuntime.8
+winget install Microsoft.VCRedist.2015+.x64
+# Reboot, then: winget install Microsoft.FoundryLocal --source winget
+```
+
 **Foundry not starting?**
 ```powershell
 foundry service restart

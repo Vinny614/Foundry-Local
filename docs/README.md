@@ -392,6 +392,41 @@ cd C:\FoundryDemo\mcp-server
 
 ## 🛠️ Troubleshooting
 
+### Issue: Foundry Local installation fails with error 0x80073cf3
+
+**Error message:** `Package failed updates, dependency or conflict validation. This package has a dependency missing from your system.`
+
+**Solution:**
+```powershell
+# Option 1: Run the dependency fix script (recommended)
+C:\FoundryDemo\fix_foundry_dependencies.ps1
+# Then reboot and run install_foundry_local.ps1 again
+
+# Option 2: Manual installation
+winget install Microsoft.DotNet.DesktopRuntime.8
+winget install Microsoft.VCRedist.2015+.x64
+# Reboot the VM
+# Then: winget install Microsoft.FoundryLocal --source winget
+```
+
+**Root cause:** Foundry Local requires .NET 8 Desktop Runtime and Visual C++ Redistributables. The updated installation script now handles this automatically, but if you encounter this error, use the fix script above.
+
+### Issue: 'foundry' command not recognized after installation
+
+**Solution:**
+```powershell
+# 1. First verify Foundry Local is actually installed
+Get-AppxPackage | Select-String "Foundry"
+
+# 2. If not installed, there was an installation error - see above
+# 3. If installed but command not found, refresh PATH:
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+# 4. If still not working, close PowerShell and open a NEW Administrator PowerShell window
+# 5. Check if foundry.exe exists:
+Test-Path "$env:LOCALAPPDATA\Microsoft\WindowsApps\foundry.exe"
+```
+
 ### Issue: Foundry Local service not starting
 
 **Solution:**
